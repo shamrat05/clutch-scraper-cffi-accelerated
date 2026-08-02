@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Star, Tag, Calendar, Globe, Phone, ArrowRight } from 'lucide-react';
+import { MapPin, Star, Tag, Calendar, Globe, Phone, ArrowRight, Award } from 'lucide-react';
 import type { Company } from '../types';
 
 interface CardViewProps {
@@ -21,6 +21,7 @@ export const CardView: React.FC<CardViewProps> = ({ items, onSelect }) => {
       {items.map((item, idx) => {
         const location = [item.locality, item.country].filter(Boolean).join(', ') || 'Global';
         const services = (item.services_offered || '').split(',').slice(0, 3).filter(Boolean);
+        const certCount = item.cert_count || (item.certifications ? item.certifications.split(',').length : 0);
 
         return (
           <div key={item.profile_url || idx} className="agency-card">
@@ -45,6 +46,11 @@ export const CardView: React.FC<CardViewProps> = ({ items, onSelect }) => {
                 {item.price_range && (
                   <div className="metric-item">
                     <Tag size={13} /> {item.price_range}
+                  </div>
+                )}
+                {certCount > 0 && (
+                  <div className="metric-item" style={{ color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                    <Award size={13} /> {certCount} Cert{certCount > 1 ? 's' : ''}
                   </div>
                 )}
                 {item.founding_year && (

@@ -120,7 +120,7 @@ def search_companies(
         SELECT 
             company_name, profile_url, official_website, phone, founding_year, 
             price_range, rating, review_count, locality, region, country, 
-            services_offered, certifications, team_leadership, lead_score,
+            services_offered, certifications, cert_count, team_leadership, lead_score,
             total_reviews_extracted, description, reviews_sample
         FROM companies 
         WHERE {where_str} 
@@ -147,6 +147,138 @@ def search_companies(
         "total_pages": (total_matched + limit - 1) // limit if limit > 0 else 1,
         "items": items
     }
+
+@app.get("/api/reviews")
+def search_reviews(
+    search: str = "",
+    country: str = "",
+    min_rating: str = "",
+    sort_by: str = "review_rating",
+    sort_order: str = "DESC",
+    page: int = 1,
+    limit: int = 20
+):
+    """Google & LinkedIn style Reviewer Lead Search Engine"""
+    conn = get_db()
+    where_clauses = ["1=1"]
+    params = []
+
+    if search and search.strip():
+        s_like = f"%{search.strip().lower()}%"
+        where_clauses.append("(LOWER(reviewer_name) LIKE ? OR LOWER(review_title) LIKE ? OR LOWER(review_body) LIKE ? OR LOWER(company_name) LIKE ?)")
+        params.extend([s_like, s_like, s_like, s_like])
+    if country and country.strip():
+        where_clauses.append("country = ?")
+        params.append(country.strip())
+    if min_rating and min_rating.strip():
+        try:
+            where_clauses.append("review_rating >= ?")
+            params.append(float(min_rating))
+        except ValueError:
+            pass
+
+    where_str = " AND ".join(where_clauses)
+    
+    allowed_sorts = {
+        "review_rating": "review_rating",
+        "reviewer_name": "reviewer_name",
+        "company_name": "company_name"
+    }
+    sort_col = allowed_sorts.get(sort_by, "review_rating")
+    sort_dir = "DESC" if sort_order.upper() == "DESC" else "ASC"
+
+    try:
+        count_sql = f"SELECT COUNT(*) FROM reviews WHERE {where_str}"
+        total_matched = conn.execute(count_sql, params).fetchone()[0]
+
+        offset = (page - 1) * limit
+        data_sql = f"""
+            SELECT 
+                reviewer_name, review_title, review_rating, review_body,
+                company_name, profile_url, official_website, phone, locality, country
+            FROM reviews
+            WHERE {where_str}
+            ORDER BY {sort_col} {sort_dir} NULLS LAST
+            LIMIT {limit} OFFSET {offset}
+        """
+        rows = conn.execute(data_sql, params).fetchall()
+        cols = [column[0] for column in conn.description]
+        items = [dict(zip(cols, r)) for r in rows]
+    except Exception:
+        total_matched = 0
+        items = []
+
+    conn.close()
+    return {
+        "total": total_matched,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total_matched + limit - 1) // limit if limit > 0 else 1,
+        "items": items
+    }
+
+@app.post("/api/export_reviews")
+def export_reviews(payload: dict):
+    search = payload.get("search", "")
+    country = payload.get("country", "")
+    min_rating = payload.get("min_rating")
+    selected_columns = payload.get("columns", [])
+    export_format = payload.get("format", "csv").lower()
+
+    conn = get_db()
+    where_clauses = ["1=1"]
+    params = []
+
+    if search:
+        s_like = f"%{search.strip().lower()}%"
+        where_clauses.append("(LOWER(reviewer_name) LIKE ? OR LOWER(review_title) LIKE ? OR LOWER(review_body) LIKE ? OR LOWER(company_name) LIKE ?)")
+        params.extend([s_like, s_like, s_like, s_like])
+    if country:
+        where_clauses.append("country = ?")
+        params.append(country)
+    if min_rating:
+        where_clauses.append("review_rating >= ?")
+        params.append(float(min_rating))
+
+    where_str = " AND ".join(where_clauses)
+    
+    all_valid_cols = [
+        "reviewer_name", "review_title", "review_rating", "review_body",
+        "company_name", "profile_url", "official_website", "phone", "locality", "country"
+    ]
+    
+    cols_to_fetch = [c for c in selected_columns if c in all_valid_cols] or all_valid_cols
+
+    cols_str = ", ".join(cols_to_fetch)
+    query_sql = f"SELECT {cols_str} FROM reviews WHERE {where_str} ORDER BY review_rating DESC LIMIT 50000"
+    rows = conn.execute(query_sql, params).fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    if export_format == "csv":
+        writer = csv.writer(output)
+        writer.writerow(cols_to_fetch)
+        for r in rows:
+            writer.writerow(r)
+        media_type = "text/csv"
+        filename = "clutch_reviewer_leads.csv"
+        content = output.getvalue()
+    elif export_format == "json":
+        items = [dict(zip(cols_to_fetch, r)) for r in rows]
+        content = json.dumps(items, indent=2, ensure_ascii=False)
+        media_type = "application/json"
+        filename = "clutch_reviewer_leads.json"
+    else:
+        items = [json.dumps(dict(zip(cols_to_fetch, r)), ensure_ascii=False) for r in rows]
+        content = "\n".join(items)
+        media_type = "application/x-ndjson"
+        filename = "clutch_reviewer_leads.jsonl"
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 @app.post("/api/export")
 def export_companies(payload: dict):

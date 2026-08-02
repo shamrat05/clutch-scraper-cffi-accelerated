@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { FilterBar } from './components/FilterBar';
 import { CardView } from './components/CardView';
 import { TableView } from './components/TableView';
+import { ReviewHubView } from './components/ReviewHubView';
 import { SideDrawer } from './components/SideDrawer';
 import { SavedViewsModal } from './components/SavedViewsModal';
 import { ExportModal } from './components/ExportModal';
@@ -22,6 +23,7 @@ const INITIAL_FILTERS: FilterState = {
   page: 1,
   limit: 24,
   viewMode: 'card',
+  activeTab: 'companies',
 };
 
 export function App() {
@@ -54,6 +56,8 @@ export function App() {
 
   // Fetch Companies
   useEffect(() => {
+    if (filters.activeTab !== 'companies') return;
+
     setIsLoading(true);
     const params = new URLSearchParams({
       search: filters.search,
@@ -125,75 +129,83 @@ export function App() {
       <Header
         totalCount={meta.total_companies}
         savedViewsCount={savedViews.length}
+        activeTab={filters.activeTab}
+        onTabChange={(tab) => handleFilterChange({ activeTab: tab })}
         onOpenSavedViews={() => setIsSavedViewsOpen(true)}
         onOpenExport={() => setIsExportOpen(true)}
       />
 
-      <FilterBar
-        filters={filters}
-        meta={meta}
-        onChange={handleFilterChange}
-        onReset={handleResetFilters}
-        onSaveView={handleSaveCurrentView}
-      />
+      {filters.activeTab === 'reviews' ? (
+        <ReviewHubView meta={meta} />
+      ) : (
+        <>
+          <FilterBar
+            filters={filters}
+            meta={meta}
+            onChange={handleFilterChange}
+            onReset={handleResetFilters}
+            onSaveView={handleSaveCurrentView}
+          />
 
-      <main>
-        <div className="results-header">
-          <div className="results-count">
-            Found <strong>{totalMatched.toLocaleString()}</strong> matching agencies
-          </div>
+          <main>
+            <div className="results-header">
+              <div className="results-count">
+                Found <strong>{totalMatched.toLocaleString()}</strong> matching agencies
+              </div>
 
-          <div className="sort-controls">
-            <span>Sort By:</span>
-            <select
-              value={filters.sort_by}
-              onChange={(e) => handleFilterChange({ sort_by: e.target.value })}
-            >
-              <option value="lead_score">Lead Quality Score</option>
-              <option value="review_count">Review Count</option>
-              <option value="rating">Overall Rating</option>
-              <option value="company_name">Company Name</option>
-            </select>
-            <button
-              className="btn btn-secondary btn-icon-only"
-              onClick={handleToggleSortOrder}
-              title="Toggle Sort Direction"
-            >
-              <ArrowUpDown size={14} />
-            </button>
-          </div>
-        </div>
+              <div className="sort-controls">
+                <span>Sort By:</span>
+                <select
+                  value={filters.sort_by}
+                  onChange={(e) => handleFilterChange({ sort_by: e.target.value })}
+                >
+                  <option value="lead_score">Lead Quality Score</option>
+                  <option value="review_count">Review Count</option>
+                  <option value="rating">Overall Rating</option>
+                  <option value="company_name">Company Name</option>
+                </select>
+                <button
+                  className="btn btn-secondary btn-icon-only"
+                  onClick={handleToggleSortOrder}
+                  title="Toggle Sort Direction"
+                >
+                  <ArrowUpDown size={14} />
+                </button>
+              </div>
+            </div>
 
-        {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>
-            Loading DuckDB lead dataset...
-          </div>
-        ) : filters.viewMode === 'card' ? (
-          <CardView items={items} onSelect={(comp) => setSelectedCompany(comp)} />
-        ) : (
-          <TableView items={items} onSelect={(comp) => setSelectedCompany(comp)} />
-        )}
+            {isLoading ? (
+              <div style={{ textAlign: 'center', padding: '80px', color: '#94a3b8' }}>
+                Loading DuckDB lead dataset...
+              </div>
+            ) : filters.viewMode === 'card' ? (
+              <CardView items={items} onSelect={(comp) => setSelectedCompany(comp)} />
+            ) : (
+              <TableView items={items} onSelect={(comp) => setSelectedCompany(comp)} />
+            )}
 
-        <div className="pagination-bar">
-          <button
-            className="btn btn-secondary"
-            disabled={filters.page <= 1}
-            onClick={() => handleFilterChange({ page: filters.page - 1 })}
-          >
-            <ChevronLeft size={16} /> Previous
-          </button>
-          <span style={{ fontSize: '14px', color: '#94a3b8' }}>
-            Page <strong>{filters.page}</strong> of <strong>{totalPages}</strong>
-          </span>
-          <button
-            className="btn btn-secondary"
-            disabled={filters.page >= totalPages}
-            onClick={() => handleFilterChange({ page: filters.page + 1 })}
-          >
-            Next <ChevronRight size={16} />
-          </button>
-        </div>
-      </main>
+            <div className="pagination-bar">
+              <button
+                className="btn btn-secondary"
+                disabled={filters.page <= 1}
+                onClick={() => handleFilterChange({ page: filters.page - 1 })}
+              >
+                <ChevronLeft size={16} /> Previous
+              </button>
+              <span style={{ fontSize: '14px', color: '#94a3b8' }}>
+                Page <strong>{filters.page}</strong> of <strong>{totalPages}</strong>
+              </span>
+              <button
+                className="btn btn-secondary"
+                disabled={filters.page >= totalPages}
+                onClick={() => handleFilterChange({ page: filters.page + 1 })}
+              >
+                Next <ChevronRight size={16} />
+              </button>
+            </div>
+          </main>
+        </>
+      )}
 
       <SideDrawer company={selectedCompany} onClose={() => setSelectedCompany(null)} />
 
