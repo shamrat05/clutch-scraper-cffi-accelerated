@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clutch Lead Generation & Intelligence Hub</title>
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navbar -->
+        <header class="navbar">
+            <div class="nav-brand">
+                <div class="logo-icon"><i class="fa-solid fa-layer-group"></i></div>
+                <div class="brand-text">
+                    <h1>Clutch Lead Hub</h1>
+                    <span class="subtitle">Multi-Dimensional Outreach Engine</span>
+                </div>
+            </div>
+            
+            <div class="nav-stats">
+                <div class="stat-badge">
+                    <i class="fa-solid fa-database"></i>
+                    <span id="totalCountBadge">Loading...</span> Companies Indexed
+                </div>
+                <div class="stat-badge status-live">
+                    <i class="fa-solid fa-bolt"></i> DuckDB Accelerated
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <button class="btn btn-secondary" id="savedViewsBtn">
+                    <i class="fa-solid fa-bookmark"></i> Saved Views <span class="badge" id="savedViewsCount">0</span>
+                </button>
+                <button class="btn btn-primary" id="openExportBtn">
+                    <i class="fa-solid fa-file-export"></i> Export Leads
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Toolbar & Filter Bar -->
+        <section class="toolbar-section">
+            <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchInput" placeholder="Search company name, city, service (e.g. SEO, London, Web Dev)...">
+                <button id="clearSearchBtn" class="btn-icon" style="display:none;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label><i class="fa-solid fa-earth-americas"></i> Country</label>
+                    <select id="countryFilter">
+                        <option value="">All Countries</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fa-solid fa-dollar-sign"></i> Price Range</label>
+                    <select id="priceFilter">
+                        <option value="">All Rates</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fa-solid fa-star"></i> Min Rating</label>
+                    <select id="ratingFilter">
+                        <option value="">Any Rating</option>
+                        <option value="4.8">4.8+ Stars ⭐</option>
+                        <option value="4.5">4.5+ Stars ⭐</option>
+                        <option value="4.0">4.0+ Stars ⭐</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label><i class="fa-solid fa-comments"></i> Min Reviews</label>
+                    <select id="reviewsFilter">
+                        <option value="">Any Reviews</option>
+                        <option value="50">50+ Reviews</option>
+                        <option value="20">20+ Reviews</option>
+                        <option value="10">10+ Reviews</option>
+                        <option value="1">1+ Review</option>
+                    </select>
+                </div>
+
+                <div class="filter-group toggle-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="phoneOnlyCheck">
+                        <span>Has Phone</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="websiteOnlyCheck">
+                        <span>Has Website</span>
+                    </label>
+                </div>
+
+                <div class="filter-actions">
+                    <button class="btn btn-secondary btn-icon-only" id="saveCurrentViewBtn" title="Save Current Filter Setup">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                    </button>
+                    <button class="btn btn-secondary btn-icon-only" id="resetFiltersBtn" title="Reset All Filters">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+
+                    <!-- View Mode Toggle -->
+                    <div class="view-toggle">
+                        <button class="toggle-btn active" id="cardViewBtn" title="Grid / Card View">
+                            <i class="fa-solid fa-border-all"></i>
+                        </button>
+                        <button class="toggle-btn" id="listViewBtn" title="List / Table View">
+                            <i class="fa-solid fa-list"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Filters Bar -->
+            <div class="active-filters-bar" id="activeFiltersBar" style="display:none;">
+                <span class="filter-label">Active Filters:</span>
+                <div class="tags-container" id="activeFilterTags"></div>
+            </div>
+        </section>
+
+        <!-- Main Content Area -->
+        <main class="content-area">
+            <!-- Results Header -->
+            <div class="results-header">
+                <div class="results-count">
+                    Found <strong id="matchedCount">0</strong> matching agencies
+                </div>
+
+                <div class="sort-controls">
+                    <label>Sort By:</label>
+                    <select id="sortBySelect">
+                        <option value="lead_score">Lead Quality Score</option>
+                        <option value="review_count">Review Count</option>
+                        <option value="rating">Overall Rating</option>
+                        <option value="company_name">Company Name</option>
+                    </select>
+                    <button class="btn-icon-only btn-secondary" id="sortOrderBtn" title="Toggle Sort Order">
+                        <i class="fa-solid fa-arrow-down-wide-short" id="sortOrderIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card View Container -->
+            <div class="cards-grid" id="cardsGrid"></div>
+
+            <!-- List / Table View Container -->
+            <div class="table-container" id="tableContainer" style="display:none;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Company Name</th>
+                            <th>Location</th>
+                            <th>Rating</th>
+                            <th>Reviews</th>
+                            <th>Rate Range</th>
+                            <th>Lead Score</th>
+                            <th>Contact Links</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Bar -->
+            <div class="pagination-bar">
+                <button class="btn btn-secondary" id="prevPageBtn" disabled><i class="fa-solid fa-chevron-left"></i> Previous</button>
+                <span class="page-info">Page <strong id="currentPageNum">1</strong> of <strong id="totalPagesNum">1</strong></span>
+                <button class="btn btn-secondary" id="nextPageBtn" disabled>Next <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Side Drawer Component (Company Detail Slide-over) -->
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <aside class="drawer" id="detailDrawer">
+        <div class="drawer-header">
+            <div class="drawer-title-group">
+                <h2 id="drawerCompanyName">Company Details</h2>
+                <div class="drawer-badges">
+                    <span class="badge badge-score" id="drawerLeadScore">Score: 95</span>
+                    <span class="badge badge-rating" id="drawerRating">5.0 ⭐</span>
+                </div>
+            </div>
+            <button class="btn-icon-only btn-close" id="closeDrawerBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="drawer-body" id="drawerBody">
+            <!-- Dynamic Content Injected Here -->
+        </div>
+    </aside>
+
+    <!-- Modal: Saved Custom Views -->
+    <div class="modal-overlay" id="savedViewsModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bookmark"></i> Saved Custom Lead Views</h3>
+                <button class="btn-icon-only btn-close closeModalBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="saved-views-list" id="savedViewsList">
+                    <p class="empty-msg">No custom lead views saved yet. Filter agencies and click the Save icon to keep views for 1-click access!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Column Selection & Export -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-export"></i> Custom Export & Column Selector</h3>
+                <button class="btn-icon-only btn-close closeModalBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="export-format-selector">
+                    <label>Select Export Format:</label>
+                    <div class="radio-group">
+                        <label class="radio-card active">
+                            <input type="radio" name="exportFormat" value="csv" checked>
+                            <i class="fa-solid fa-file-csv"></i> CSV File
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="exportFormat" value="json">
+                            <i class="fa-solid fa-file-code"></i> JSON Array
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="exportFormat" value="tsv">
+                            <i class="fa-solid fa-file-lines"></i> TSV File
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="exportFormat" value="jsonl">
+                            <i class="fa-solid fa-database"></i> JSONL / NDJSON
+                        </label>
+                    </div>
+                </div>
+
+                <div class="column-selection-section">
+                    <div class="col-header">
+                        <label>Select Included Columns:</label>
+                        <div>
+                            <button class="btn-text" id="selectAllColsBtn">Select All</button>
+                            <button class="btn-text" id="deselectAllColsBtn">Deselect All</button>
+                        </div>
+                    </div>
+
+                    <div class="columns-grid" id="columnsGrid">
+                        <label class="checkbox-card"><input type="checkbox" value="company_name" checked> Company Name</label>
+                        <label class="checkbox-card"><input type="checkbox" value="official_website" checked> Official Website</label>
+                        <label class="checkbox-card"><input type="checkbox" value="phone" checked> Phone Number</label>
+                        <label class="checkbox-card"><input type="checkbox" value="locality" checked> City / Locality</label>
+                        <label class="checkbox-card"><input type="checkbox" value="country" checked> Country</label>
+                        <label class="checkbox-card"><input type="checkbox" value="rating" checked> Rating</label>
+                        <label class="checkbox-card"><input type="checkbox" value="review_count" checked> Review Count</label>
+                        <label class="checkbox-card"><input type="checkbox" value="price_range" checked> Rate Range</label>
+                        <label class="checkbox-card"><input type="checkbox" value="founding_year" checked> Founding Year</label>
+                        <label class="checkbox-card"><input type="checkbox" value="services_offered" checked> Services Offered</label>
+                        <label class="checkbox-card"><input type="checkbox" value="street_address"> Street Address</label>
+                        <label class="checkbox-card"><input type="checkbox" value="region"> State / Region</label>
+                        <label class="checkbox-card"><input type="checkbox" value="certifications"> Certifications</label>
+                        <label class="checkbox-card"><input type="checkbox" value="team_leadership"> Team Leadership</label>
+                        <label class="checkbox-card"><input type="checkbox" value="lead_score" checked> Lead Score</label>
+                        <label class="checkbox-card"><input type="checkbox" value="description"> Description</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary closeModalBtn">Cancel</button>
+                <button class="btn btn-primary" id="confirmExportBtn"><i class="fa-solid fa-download"></i> Download Export</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
