@@ -1,0 +1,18 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.ruff_cache/
+.opencode/
+
+# Large Dataset files (>100MB limit on GitHub)
+*.jsonl
+clutch_extraction_checkpoint.json
+clutch_cf_session.json
+clutch_failed_checkpoint.json
+clutch_permanent_failures.json
+downloaded_files/
+
+# Local Environment & Logs
+*.log
+.env
