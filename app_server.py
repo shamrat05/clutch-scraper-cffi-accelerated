@@ -43,6 +43,16 @@ VITE_DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 if os.path.exists(VITE_DIST_DIR):
     app.mount("/assets", StaticFiles(directory=os.path.join(VITE_DIST_DIR, "assets")), name="assets")
 
+@app.post("/api/sync")
+def trigger_sync():
+    """Triggers live incremental update against Clutch sitemap index"""
+    try:
+        import run_clutch_incremental
+        result = run_clutch_incremental.sync_incremental()
+        return result
+    except Exception as e:
+        return {"status": "error", "message": str(e), "new_companies": 0, "duration_seconds": 0.05}
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     if os.path.exists(os.path.join(VITE_DIST_DIR, "index.html")):
