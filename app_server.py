@@ -26,13 +26,16 @@ app.add_middleware(
 def get_db():
     return duckdb.connect(DUCKDB_FILE, read_only=True)
 
-# Mount static and template paths
-os.makedirs(os.path.join(BASE_DIR, "static"), exist_ok=True)
-os.makedirs(os.path.join(BASE_DIR, "templates"), exist_ok=True)
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+VITE_DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
+
+if os.path.exists(VITE_DIST_DIR):
+    app.mount("/assets", StaticFiles(directory=os.path.join(VITE_DIST_DIR, "assets")), name="assets")
 
 @app.get("/", response_class=HTMLResponse)
 def index():
+    if os.path.exists(os.path.join(VITE_DIST_DIR, "index.html")):
+        with open(os.path.join(VITE_DIST_DIR, "index.html"), "r", encoding="utf-8") as f:
+            return f.read()
     with open(os.path.join(BASE_DIR, "templates", "index.html"), "r", encoding="utf-8") as f:
         return f.read()
 
@@ -51,15 +54,15 @@ def get_meta():
 
 @app.get("/api/companies")
 def search_companies(
-    search: Optional[str] = "",
-    country: Optional[str] = "",
-    price_range: Optional[str] = "",
-    min_rating: Optional[float] = None,
-    min_reviews: Optional[int] = None,
-    has_phone: Optional[bool] = False,
-    has_website: Optional[bool] = False,
-    sort_by: Optional[str] = "lead_score",
-    sort_order: Optional[str] = "DESC",
+    search: str = "",
+    country: str = "",
+    price_range: str = "",
+    min_rating: str = "",
+    min_reviews: str = "",
+    has_phone: bool = False,
+    has_website: bool = False,
+    sort_by: str = "lead_score",
+    sort_order: str = "DESC",
     page: int = 1,
     limit: int = 24
 ):
@@ -67,22 +70,28 @@ def search_companies(
     where_clauses = ["1=1"]
     params = []
 
-    if search:
+    if search and search.strip():
         s_like = f"%{search.strip().lower()}%"
         where_clauses.append("(LOWER(company_name) LIKE ? OR LOWER(locality) LIKE ? OR LOWER(services_offered) LIKE ?)")
         params.extend([s_like, s_like, s_like])
-    if country:
+    if country and country.strip():
         where_clauses.append("country = ?")
-        params.append(country)
-    if price_range:
+        params.append(country.strip())
+    if price_range and price_range.strip():
         where_clauses.append("price_range = ?")
-        params.append(price_range)
-    if min_rating is not None and min_rating > 0:
-        where_clauses.append("rating >= ?")
-        params.append(min_rating)
-    if min_reviews is not None and min_reviews > 0:
-        where_clauses.append("review_count >= ?")
-        params.append(min_reviews)
+        params.append(price_range.strip())
+    if min_rating and min_rating.strip():
+        try:
+            where_clauses.append("rating >= ?")
+            params.append(float(min_rating))
+        except ValueError:
+            pass
+    if min_reviews and min_reviews.strip():
+        try:
+            where_clauses.append("review_count >= ?")
+            params.append(int(min_reviews))
+        except ValueError:
+            pass
     if has_phone:
         where_clauses.append("phone != ''")
     if has_website:
