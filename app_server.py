@@ -151,6 +151,7 @@ def search_companies(
 @app.get("/api/reviews")
 def search_reviews(
     search: str = "",
+    reviewer_company: str = "",
     country: str = "",
     min_rating: str = "",
     sort_by: str = "review_rating",
@@ -158,17 +159,21 @@ def search_reviews(
     page: int = 1,
     limit: int = 20
 ):
-    """Google & LinkedIn style Reviewer Lead Search Engine"""
+    """Google & LinkedIn style Client Buyer & Reviewer Lead Search Engine"""
     conn = get_db()
     where_clauses = ["1=1"]
     params = []
 
     if search and search.strip():
         s_like = f"%{search.strip().lower()}%"
-        where_clauses.append("(LOWER(reviewer_name) LIKE ? OR LOWER(review_title) LIKE ? OR LOWER(review_body) LIKE ? OR LOWER(company_name) LIKE ?)")
+        where_clauses.append("(LOWER(reviewer_name) LIKE ? OR LOWER(reviewer_company) LIKE ? OR LOWER(review_title) LIKE ? OR LOWER(review_body) LIKE ?)")
         params.extend([s_like, s_like, s_like, s_like])
+    if reviewer_company and reviewer_company.strip():
+        c_like = f"%{reviewer_company.strip().lower()}%"
+        where_clauses.append("LOWER(reviewer_company) LIKE ?")
+        params.append(c_like)
     if country and country.strip():
-        where_clauses.append("country = ?")
+        where_clauses.append("vendor_country = ?")
         params.append(country.strip())
     if min_rating and min_rating.strip():
         try:
@@ -182,7 +187,7 @@ def search_reviews(
     allowed_sorts = {
         "review_rating": "review_rating",
         "reviewer_name": "reviewer_name",
-        "company_name": "company_name"
+        "reviewer_company": "reviewer_company"
     }
     sort_col = allowed_sorts.get(sort_by, "review_rating")
     sort_dir = "DESC" if sort_order.upper() == "DESC" else "ASC"
@@ -194,8 +199,8 @@ def search_reviews(
         offset = (page - 1) * limit
         data_sql = f"""
             SELECT 
-                reviewer_name, review_title, review_rating, review_body,
-                company_name, profile_url, official_website, phone, locality, country
+                reviewer_name, reviewer_company, review_title, review_rating, review_body,
+                vendor_agency_name, vendor_profile_url, vendor_website, vendor_phone, vendor_locality, vendor_country
             FROM reviews
             WHERE {where_str}
             ORDER BY {sort_col} {sort_dir} NULLS LAST
@@ -204,7 +209,7 @@ def search_reviews(
         rows = conn.execute(data_sql, params).fetchall()
         cols = [column[0] for column in conn.description]
         items = [dict(zip(cols, r)) for r in rows]
-    except Exception:
+    except Exception as e:
         total_matched = 0
         items = []
 
@@ -220,6 +225,7 @@ def search_reviews(
 @app.post("/api/export_reviews")
 def export_reviews(payload: dict):
     search = payload.get("search", "")
+    reviewer_company = payload.get("reviewer_company", "")
     country = payload.get("country", "")
     min_rating = payload.get("min_rating")
     selected_columns = payload.get("columns", [])
@@ -231,10 +237,13 @@ def export_reviews(payload: dict):
 
     if search:
         s_like = f"%{search.strip().lower()}%"
-        where_clauses.append("(LOWER(reviewer_name) LIKE ? OR LOWER(review_title) LIKE ? OR LOWER(review_body) LIKE ? OR LOWER(company_name) LIKE ?)")
+        where_clauses.append("(LOWER(reviewer_name) LIKE ? OR LOWER(reviewer_company) LIKE ? OR LOWER(review_title) LIKE ? OR LOWER(review_body) LIKE ?)")
         params.extend([s_like, s_like, s_like, s_like])
+    if reviewer_company:
+        where_clauses.append("LOWER(reviewer_company) LIKE ?")
+        params.append(f"%{reviewer_company.strip().lower()}%")
     if country:
-        where_clauses.append("country = ?")
+        where_clauses.append("vendor_country = ?")
         params.append(country)
     if min_rating:
         where_clauses.append("review_rating >= ?")
@@ -243,8 +252,8 @@ def export_reviews(payload: dict):
     where_str = " AND ".join(where_clauses)
     
     all_valid_cols = [
-        "reviewer_name", "review_title", "review_rating", "review_body",
-        "company_name", "profile_url", "official_website", "phone", "locality", "country"
+        "reviewer_name", "reviewer_company", "review_title", "review_rating", "review_body",
+        "vendor_agency_name", "vendor_profile_url", "vendor_website", "vendor_phone", "vendor_locality", "vendor_country"
     ]
     
     cols_to_fetch = [c for c in selected_columns if c in all_valid_cols] or all_valid_cols
@@ -261,18 +270,18 @@ def export_reviews(payload: dict):
         for r in rows:
             writer.writerow(r)
         media_type = "text/csv"
-        filename = "clutch_reviewer_leads.csv"
+        filename = "clutch_client_buyer_leads.csv"
         content = output.getvalue()
     elif export_format == "json":
         items = [dict(zip(cols_to_fetch, r)) for r in rows]
         content = json.dumps(items, indent=2, ensure_ascii=False)
         media_type = "application/json"
-        filename = "clutch_reviewer_leads.json"
+        filename = "clutch_client_buyer_leads.json"
     else:
         items = [json.dumps(dict(zip(cols_to_fetch, r)), ensure_ascii=False) for r in rows]
         content = "\n".join(items)
         media_type = "application/x-ndjson"
-        filename = "clutch_reviewer_leads.jsonl"
+        filename = "clutch_client_buyer_leads.jsonl"
 
     return Response(
         content=content,

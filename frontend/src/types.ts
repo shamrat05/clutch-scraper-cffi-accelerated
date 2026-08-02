@@ -7,15 +7,16 @@ export interface Review {
 
 export interface ReviewLead {
   reviewer_name: string;
+  reviewer_company: string;
   review_title: string;
   review_rating: number | null;
   review_body: string;
-  company_name: string;
-  profile_url: string;
-  official_website: string;
-  phone: string;
-  locality: string;
-  country: string;
+  vendor_agency_name: string;
+  vendor_profile_url: string;
+  vendor_website: string;
+  vendor_phone: string;
+  vendor_locality: string;
+  vendor_country: string;
 }
 
 export interface Company {

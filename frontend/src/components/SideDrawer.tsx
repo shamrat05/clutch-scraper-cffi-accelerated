@@ -1,11 +1,17 @@
 import React from 'react';
-import { X, Globe, Phone, MapPin, Building2, Tag, Calendar, Star, Users, Award, FileText, MessageCircle } from 'lucide-react';
+import { X, Globe, Phone, MapPin, Building2, Tag, Calendar, Star, Users, Award, FileText, MessageCircle, ExternalLink, User } from 'lucide-react';
 import type { Company } from '../types';
 
 interface SideDrawerProps {
   company: Company | null;
   onClose: () => void;
 }
+
+const LinkedinIcon = () => (
+  <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+  </svg>
+);
 
 export const SideDrawer: React.FC<SideDrawerProps> = ({ company, onClose }) => {
   if (!company) return null;
@@ -128,18 +134,51 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({ company, onClose }) => {
           {reviews.length > 0 && (
             <div className="detail-section">
               <h4><MessageCircle size={13} /> Extracted Client Feedback ({reviews.length})</h4>
-              {reviews.map((r, idx) => (
-                <div key={idx} className="review-item">
-                  <div className="title">
-                    <span>{r.title || 'Client Review'}</span>
-                    <span style={{ color: '#f59e0b' }}>{r.rating ? `${r.rating} ⭐` : ''}</span>
+              {reviews.map((r, idx) => {
+                const reviewerName = r.author || 'Verified Client';
+                const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(`"${reviewerName}" "${company.company_name}"`)}`;
+                const linkedinSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(`site:linkedin.com/in/ "${reviewerName}"`)}`;
+
+                return (
+                  <div key={idx} className="review-item" style={{ background: '#0b0f19', padding: '14px', borderRadius: '10px', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontWeight: 600, fontSize: '13px' }}>{r.title || 'Client Project Feedback'}</span>
+                      <span style={{ color: '#f59e0b' }}>{r.rating ? `${r.rating} ⭐` : ''}</span>
+                    </div>
+
+                    <div style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', marginBottom: '10px' }}>"{r.body}"</div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ fontSize: '12px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <User size={13} /> By: {reviewerName}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <a
+                          href={googleSearchUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '10px', padding: '4px 8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          title="Search Reviewer on Google"
+                        >
+                          <Globe size={11} /> Google <ExternalLink size={9} />
+                        </a>
+                        <a
+                          href={linkedinSearchUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn btn-secondary btn-sm"
+                          style={{ fontSize: '10px', padding: '4px 8px', color: '#0a66c2', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          title="Search Reviewer on LinkedIn"
+                        >
+                          <LinkedinIcon /> LinkedIn <ExternalLink size={9} />
+                        </a>
+                      </div>
+                    </div>
                   </div>
-                  <div className="body">"{r.body}"</div>
-                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-                    By: {r.author || 'Verified Client'}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
