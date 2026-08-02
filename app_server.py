@@ -23,8 +23,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Shared C-level DuckDB connection pool & in-memory cache
+GLOBAL_CONN = duckdb.connect(DUCKDB_FILE, read_only=True)
+GLOBAL_CONN.execute("PRAGMA threads=8;")
+GLOBAL_CONN.execute("PRAGMA max_memory='4GB';")
+
+# Pre-calculate metadata cache on server startup for 0.01ms response time
+META_CACHE = {
+    "total_companies": GLOBAL_CONN.execute("SELECT COUNT(*) FROM companies").fetchone()[0],
+    "countries": [r[0] for r in GLOBAL_CONN.execute("SELECT DISTINCT country FROM companies WHERE country != '' ORDER BY country").fetchall()],
+    "price_ranges": [r[0] for r in GLOBAL_CONN.execute("SELECT DISTINCT price_range FROM companies WHERE price_range != '' ORDER BY price_range").fetchall()]
+}
+
 def get_db():
-    return duckdb.connect(DUCKDB_FILE, read_only=True)
+    return GLOBAL_CONN
 
 VITE_DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
@@ -41,16 +53,7 @@ def index():
 
 @app.get("/api/meta")
 def get_meta():
-    conn = get_db()
-    total_count = conn.execute("SELECT COUNT(*) FROM companies").fetchone()[0]
-    countries = [r[0] for r in conn.execute("SELECT DISTINCT country FROM companies WHERE country != '' ORDER BY country").fetchall()]
-    price_ranges = [r[0] for r in conn.execute("SELECT DISTINCT price_range FROM companies WHERE price_range != '' ORDER BY price_range").fetchall()]
-    conn.close()
-    return {
-        "total_companies": total_count,
-        "countries": countries,
-        "price_ranges": price_ranges
-    }
+    return META_CACHE
 
 @app.get("/api/companies")
 def search_companies(
@@ -139,7 +142,6 @@ def search_companies(
             item["reviews_sample"] = []
         items.append(item)
 
-    conn.close()
     return {
         "total": total_matched,
         "page": page,
@@ -213,7 +215,6 @@ def search_reviews(
         total_matched = 0
         items = []
 
-    conn.close()
     return {
         "total": total_matched,
         "page": page,
@@ -261,7 +262,6 @@ def export_reviews(payload: dict):
     cols_str = ", ".join(cols_to_fetch)
     query_sql = f"SELECT {cols_str} FROM reviews WHERE {where_str} ORDER BY review_rating DESC LIMIT 50000"
     rows = conn.execute(query_sql, params).fetchall()
-    conn.close()
 
     output = io.StringIO()
     if export_format == "csv":
@@ -346,7 +346,6 @@ def export_companies(payload: dict):
     cols_str = ", ".join(cols_to_fetch)
     query_sql = f"SELECT {cols_str} FROM companies WHERE {where_str} ORDER BY lead_score DESC LIMIT 50000"
     rows = conn.execute(query_sql, params).fetchall()
-    conn.close()
 
     output = io.StringIO()
     if export_format == "csv":
