@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Globe, Tag, Star, MessageSquare, Save, RotateCcw, LayoutGrid, List } from 'lucide-react';
+import { Search, Globe, Tag, Star, MessageSquare, Save, LayoutGrid, List, Trash2 } from 'lucide-react';
 import type { FilterState, MetaData } from '../types';
 
 interface FilterBarProps {
@@ -107,11 +107,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            className="btn btn-danger"
+            onClick={onReset}
+            title="Clear All Filters & Search Inputs"
+            style={{ fontWeight: 600, fontSize: '13px' }}
+          >
+            <Trash2 size={15} /> Clear All
+          </button>
+
           <button className="btn btn-secondary btn-icon-only" onClick={onSaveView} title="Save Current Custom View">
             <Save size={16} />
-          </button>
-          <button className="btn btn-secondary btn-icon-only" onClick={onReset} title="Reset All Filters">
-            <RotateCcw size={16} />
           </button>
 
           <div className="view-toggle">

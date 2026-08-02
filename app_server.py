@@ -116,7 +116,8 @@ def search_companies(
 
     # Count matching query
     count_sql = f"SELECT COUNT(*) FROM companies WHERE {where_str}"
-    total_matched = conn.execute(count_sql, params).fetchone()[0]
+    count_row = conn.execute(count_sql, params).fetchone()
+    total_matched = count_row[0] if count_row else 0
 
     offset = (page - 1) * limit
     data_sql = f"""

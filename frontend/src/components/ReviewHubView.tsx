@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Star, Globe, Phone, MapPin, User, Building, FileText, Download, ChevronLeft, ChevronRight, Layers, Filter, ExternalLink } from 'lucide-react';
+import { Search, Star, Globe, Phone, MapPin, User, Building, FileText, Download, ChevronLeft, ChevronRight, Layers, ExternalLink, Trash2 } from 'lucide-react';
 import type { ReviewLead, MetaData } from '../types';
 
 interface ReviewHubViewProps {
@@ -47,6 +47,14 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
       .finally(() => setIsLoading(false));
   }, [search, reviewerCompany, country, minRating, page, limit]);
 
+  const handleClearAll = () => {
+    setSearch('');
+    setReviewerCompany('');
+    setCountry('');
+    setMinRating('');
+    setPage(1);
+  };
+
   const handleExportReviews = async () => {
     const payload = {
       search,
@@ -82,15 +90,21 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <div>
             <h2 style={{ fontSize: '18px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <User size={20} color="#3b82f6" /> Client Buyer Lead Intelligence & Web Search
+              <User size={20} color="#4f46e5" /> Client Buyer Lead Intelligence & Web Search
             </h2>
-            <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
               Search decision-makers and launch 1-click Google & LinkedIn web searches for instant outreach
             </span>
           </div>
-          <button className="btn btn-primary" onClick={handleExportReviews}>
-            <Download size={15} /> Export Buyer Leads
-          </button>
+
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="btn btn-danger" onClick={handleClearAll} style={{ fontSize: '13px' }}>
+              <Trash2 size={15} /> Clear All
+            </button>
+            <button className="btn btn-primary" onClick={handleExportReviews}>
+              <Download size={15} /> Export Buyer Leads
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -141,21 +155,6 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
               <option value="4.0">4.0+ ⭐</option>
             </select>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '18px' }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={() => {
-                setSearch('');
-                setReviewerCompany('');
-                setCountry('');
-                setMinRating('');
-                setPage(1);
-              }}
-            >
-              <Filter size={13} /> Clear Search Filters
-            </button>
-          </div>
         </div>
       </div>
 
@@ -168,15 +167,15 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
 
       {/* Reviewer Buyer Leads Grid */}
       {isLoading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
           Searching client reviewer lead database...
         </div>
       ) : !reviews.length ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#94a3b8' }}>
+        <div style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
           No reviewer leads matched your query. Try searching reviewer name like "Tauhidul Islam" or company like "University".
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(460px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(460px, 1fr))', gap: '22px' }}>
           {reviews.map((r, idx) => {
             const vendorLoc = [r.vendor_locality, r.vendor_country].filter(Boolean).join(', ') || 'Global';
             const reviewerName = r.reviewer_name || 'Verified Decision-Maker';
@@ -204,16 +203,16 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
                   {/* Header: Reviewer Person Name & Buyer Company */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
                     <div>
-                      <div style={{ fontSize: '16px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <User size={18} color="#3b82f6" /> {reviewerName}
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <User size={18} color="#6366f1" /> {reviewerName}
                       </div>
                       <div style={{ fontSize: '13px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                         <Building size={14} /> Client Org: {reviewerCompany}
                       </div>
                     </div>
                     {r.review_rating && (
-                      <span style={{ color: '#f59e0b', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(245,158,11,0.1)', padding: '4px 8px', borderRadius: '6px' }}>
-                        <Star size={13} fill="#f59e0b" /> {r.review_rating} ⭐
+                      <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(251, 191, 36, 0.12)', padding: '4px 10px', borderRadius: '6px' }}>
+                        <Star size={13} fill="#fbbf24" /> {r.review_rating} ⭐
                       </span>
                     )}
                   </div>
@@ -225,23 +224,23 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
                       target="_blank"
                       rel="noreferrer"
                       className="btn btn-secondary btn-sm"
-                      style={{ fontSize: '11px', padding: '6px 10px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(79, 70, 229, 0.15)', color: '#818cf8', border: '1px solid rgba(79, 70, 229, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <Globe size={12} /> Google Web Search <ExternalLink size={10} />
+                      <Globe size={13} /> Google Web Search <ExternalLink size={11} />
                     </a>
                     <a
                       href={linkedinSearchUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="btn btn-secondary btn-sm"
-                      style={{ fontSize: '11px', padding: '6px 10px', background: 'rgba(10, 102, 194, 0.15)', color: '#0a66c2', border: '1px solid rgba(10, 102, 194, 0.3)', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                      style={{ fontSize: '12px', padding: '6px 12px', background: 'rgba(10, 102, 194, 0.2)', color: '#38bdf8', border: '1px solid rgba(10, 102, 194, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <LinkedinIcon /> LinkedIn Search <ExternalLink size={10} />
+                      <LinkedinIcon /> LinkedIn Search <ExternalLink size={11} />
                     </a>
                   </div>
 
                   {/* Project Title */}
-                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0', marginBottom: '8px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px' }}>
                     <FileText size={13} style={{ display: 'inline', marginRight: '6px', color: '#94a3b8' }} />
                     {r.review_title || 'Client Project Feedback'}
                   </h4>
@@ -249,14 +248,14 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
                   {/* Feedback Quote Body */}
                   <div
                     style={{
-                      background: 'rgba(11, 15, 25, 0.7)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      background: 'rgba(9, 13, 22, 0.8)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
                       borderRadius: '10px',
-                      padding: '12px 14px',
+                      padding: '14px',
                       fontSize: '13px',
-                      color: '#94a3b8',
+                      color: 'var(--text-muted)',
                       fontStyle: 'italic',
-                      lineHeight: '1.5',
+                      lineHeight: '1.6',
                     }}
                   >
                     "{r.review_body}"
@@ -264,28 +263,28 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
                 </div>
 
                 {/* Footer: Hired Vendor Agency Details */}
-                <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ paddingTop: '14px', borderTop: '1px solid rgba(255, 255, 255, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 600, letterSpacing: '0.04em' }}>
+                    <div style={{ fontSize: '11px', textTransform: 'uppercase', color: '#94a3b8', fontWeight: 700, letterSpacing: '0.05em' }}>
                       Vendor Agency Hired:
                     </div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                      <Layers size={13} color="#3b82f6" /> {r.vendor_agency_name}
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                      <Layers size={14} color="#6366f1" /> {r.vendor_agency_name}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <MapPin size={11} /> {vendorLoc}
+                    <div style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                      <MapPin size={12} /> {vendorLoc}
                     </div>
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {r.vendor_website && (
                       <a href={r.vendor_website} target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" title="Visit Agency Website">
-                        <Globe size={13} />
+                        <Globe size={14} />
                       </a>
                     )}
                     {r.vendor_phone && (
                       <a href={`tel:${r.vendor_phone}`} className="btn btn-secondary btn-sm" title="Call Agency Phone">
-                        <Phone size={13} />
+                        <Phone size={14} />
                       </a>
                     )}
                   </div>
@@ -301,7 +300,7 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
         <button className="btn btn-secondary" disabled={page <= 1} onClick={() => setPage(page - 1)}>
           <ChevronLeft size={16} /> Previous
         </button>
-        <span style={{ fontSize: '14px', color: '#94a3b8' }}>
+        <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
           Page <strong>{page}</strong> of <strong>{totalPages}</strong>
         </span>
         <button className="btn btn-secondary" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>
