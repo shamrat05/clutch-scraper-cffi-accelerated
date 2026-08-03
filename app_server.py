@@ -183,8 +183,8 @@ def search_reviews(
         params.extend([s_like, s_like, s_like, s_like])
     if reviewer_company and reviewer_company.strip():
         c_like = f"%{reviewer_company.strip().lower()}%"
-        where_clauses.append("LOWER(reviewer_company) LIKE ?")
-        params.append(c_like)
+        where_clauses.append("(LOWER(vendor_agency_name) LIKE ? OR LOWER(reviewer_company) LIKE ?)")
+        params.extend([c_like, c_like])
     if country and country.strip():
         where_clauses.append("vendor_country = ?")
         params.append(country.strip())
@@ -252,8 +252,9 @@ def export_reviews(payload: dict):
         where_clauses.append("(LOWER(reviewer_name) LIKE ? OR LOWER(reviewer_company) LIKE ? OR LOWER(review_title) LIKE ? OR LOWER(review_body) LIKE ?)")
         params.extend([s_like, s_like, s_like, s_like])
     if reviewer_company:
-        where_clauses.append("LOWER(reviewer_company) LIKE ?")
-        params.append(f"%{reviewer_company.strip().lower()}%")
+        c_like = f"%{reviewer_company.strip().lower()}%"
+        where_clauses.append("(LOWER(vendor_agency_name) LIKE ? OR LOWER(reviewer_company) LIKE ?)")
+        params.extend([c_like, c_like])
     if country:
         where_clauses.append("vendor_country = ?")
         params.append(country)
