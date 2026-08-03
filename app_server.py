@@ -212,7 +212,7 @@ def search_reviews(
         offset = (page - 1) * limit
         data_sql = f"""
             SELECT 
-                reviewer_name, reviewer_company, review_title, review_rating, review_body,
+                reviewer_name, reviewer_company, review_title, review_date, review_rating, review_body,
                 vendor_agency_name, vendor_profile_url, vendor_website, vendor_phone, vendor_locality, vendor_country
             FROM reviews
             WHERE {where_str}

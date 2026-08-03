@@ -9,6 +9,7 @@ export interface ReviewLead {
   reviewer_name: string;
   reviewer_company: string;
   review_title: string;
+  review_date?: string;
   review_rating: number | null;
   review_body: string;
   vendor_agency_name: string;
