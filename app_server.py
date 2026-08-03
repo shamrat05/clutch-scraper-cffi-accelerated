@@ -136,7 +136,7 @@ def get_cities(country: str = "", q: str = ""):
         WHERE {where_str} 
         GROUP BY 1 
         ORDER BY cnt DESC 
-        LIMIT 200
+        LIMIT 5000
     """
     rows = conn.execute(sql, params).fetchall()
     
