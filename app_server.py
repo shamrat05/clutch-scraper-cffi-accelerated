@@ -32,7 +32,8 @@ GLOBAL_CONN.execute("PRAGMA max_memory='4GB';")
 META_CACHE = {
     "total_companies": GLOBAL_CONN.execute("SELECT COUNT(*) FROM companies").fetchone()[0],
     "countries": [r[0] for r in GLOBAL_CONN.execute("SELECT DISTINCT country FROM companies WHERE country != '' ORDER BY country").fetchall()],
-    "price_ranges": [r[0] for r in GLOBAL_CONN.execute("SELECT DISTINCT price_range FROM companies WHERE price_range != '' ORDER BY price_range").fetchall()]
+    "price_ranges": [r[0] for r in GLOBAL_CONN.execute("SELECT DISTINCT price_range FROM companies WHERE price_range != '' ORDER BY price_range").fetchall()],
+    "cities": [r[0] for r in GLOBAL_CONN.execute("SELECT DISTINCT TRIM(locality) FROM companies WHERE locality != '' ORDER BY 1 LIMIT 500").fetchall()]
 }
 
 def get_db():
@@ -65,10 +66,62 @@ def index():
 def get_meta():
     return META_CACHE
 
+@app.get("/api/cities")
+def get_cities(country: str = "", q: str = ""):
+    conn = get_db()
+    where_clauses = ["locality != ''"]
+    params = []
+    if country and country.strip():
+        where_clauses.append("country = ?")
+        params.append(country.strip())
+    if q and q.strip():
+        where_clauses.append("LOWER(locality) LIKE ?")
+        params.append(f"%{q.strip().lower()}%")
+    
+    where_str = " AND ".join(where_clauses)
+    sql = f"SELECT DISTINCT TRIM(locality) FROM companies WHERE {where_str} ORDER BY 1 LIMIT 100"
+    rows = conn.execute(sql, params).fetchall()
+    return [r[0] for r in rows if r[0]]
+
+@app.get("/api/suggestions")
+def get_suggestions(q: str = "", type: str = "company", country: str = ""):
+    if not q or len(q.strip()) < 1:
+        return []
+    
+    conn = get_db()
+    term = f"%{q.strip().lower()}%"
+    type_clean = type.lower().strip()
+    
+    if type_clean == "city":
+        where_str = "LOWER(locality) LIKE ?"
+        params = [term]
+        if country and country.strip():
+            where_str += " AND country = ?"
+            params.append(country.strip())
+        sql = f"SELECT DISTINCT TRIM(locality) FROM companies WHERE {where_str} AND locality != '' ORDER BY 1 LIMIT 10"
+        return [r[0] for r in conn.execute(sql, params).fetchall()]
+
+    elif type_clean == "reviewer":
+        sql = "SELECT DISTINCT reviewer_name FROM reviews WHERE LOWER(reviewer_name) LIKE ? AND reviewer_name != '' ORDER BY 1 LIMIT 10"
+        return [r[0] for r in conn.execute(sql, [term]).fetchall()]
+
+    elif type_clean == "vendor":
+        sql = "SELECT DISTINCT vendor_agency_name FROM reviews WHERE LOWER(vendor_agency_name) LIKE ? AND vendor_agency_name != '' ORDER BY 1 LIMIT 10"
+        return [r[0] for r in conn.execute(sql, [term]).fetchall()]
+
+    elif type_clean == "buyer_company":
+        sql = "SELECT DISTINCT reviewer_company FROM reviews WHERE LOWER(reviewer_company) LIKE ? AND reviewer_company != '' ORDER BY 1 LIMIT 10"
+        return [r[0] for r in conn.execute(sql, [term]).fetchall()]
+
+    else:
+        sql = "SELECT DISTINCT company_name FROM companies WHERE LOWER(company_name) LIKE ? AND company_name != '' ORDER BY 1 LIMIT 10"
+        return [r[0] for r in conn.execute(sql, [term]).fetchall()]
+
 @app.get("/api/companies")
 def search_companies(
     search: str = "",
     country: str = "",
+    city: str = "",
     price_range: str = "",
     min_rating: str = "",
     min_reviews: str = "",
@@ -90,6 +143,9 @@ def search_companies(
     if country and country.strip():
         where_clauses.append("country = ?")
         params.append(country.strip())
+    if city and city.strip():
+        where_clauses.append("LOWER(locality) LIKE ?")
+        params.append(f"%{city.strip().lower()}%")
     if price_range and price_range.strip():
         where_clauses.append("price_range = ?")
         params.append(price_range.strip())
@@ -119,7 +175,8 @@ def search_companies(
         "review_count": "review_count",
         "lead_score": "lead_score",
         "founding_year": "founding_year",
-        "country": "country"
+        "country": "country",
+        "locality": "locality"
     }
     sort_col = allowed_sorts.get(sort_by, "lead_score")
     sort_dir = "DESC" if sort_order.upper() == "DESC" else "ASC"
@@ -223,6 +280,7 @@ def search_reviews(
         cols = [column[0] for column in conn.description]
         items = [dict(zip(cols, r)) for r in rows]
     except Exception as e:
+        print("[!] Exception in search_reviews:", e)
         total_matched = 0
         items = []
 

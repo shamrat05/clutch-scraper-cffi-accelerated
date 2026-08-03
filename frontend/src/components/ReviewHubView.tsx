@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Star, Globe, Phone, MapPin, User, Building, Download, ChevronLeft, ChevronRight, Layers, ExternalLink, Trash2, Calendar, Folder } from 'lucide-react';
+import { Star, Globe, Phone, MapPin, User, Building, Download, ChevronLeft, ChevronRight, Layers, ExternalLink, Trash2, Calendar, Folder } from 'lucide-react';
 import type { ReviewLead, MetaData } from '../types';
+import { AutocompleteInput } from './AutocompleteInput';
 
 interface ReviewHubViewProps {
   meta: MetaData;
@@ -108,31 +109,26 @@ export const ReviewHubView: React.FC<ReviewHubViewProps> = ({ meta }) => {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-          <div className="search-box">
-            <Search className="search-icon" size={18} />
-            <input
-              type="text"
-              placeholder="Search Reviewer Person Name (e.g. 'Lasse Rostock'), Client Buyer, or Feedback..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
+          <AutocompleteInput
+            type="reviewer"
+            value={search}
+            onChange={(val) => {
+              setSearch(val);
+              setPage(1);
+            }}
+            placeholder="Search Reviewer Person Name (e.g. 'Lasse Rostock'), Client Buyer, or Feedback..."
+          />
 
-          <div className="search-box">
-            <Building className="search-icon" size={18} color="#10b981" />
-            <input
-              type="text"
-              placeholder="Search Hired Vendor Agency or Buyer Company (e.g. 'Brain Station 23', 'VISER X')..."
-              value={reviewerCompany}
-              onChange={(e) => {
-                setReviewerCompany(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
+          <AutocompleteInput
+            type="vendor"
+            value={reviewerCompany}
+            onChange={(val) => {
+              setReviewerCompany(val);
+              setPage(1);
+            }}
+            placeholder="Search Hired Vendor Agency or Buyer Company (e.g. 'Brain Station 23', 'VISER X')..."
+            icon={<Building className="search-icon" size={18} color="#10b981" />}
+          />
         </div>
 
         <div className="filters-row">

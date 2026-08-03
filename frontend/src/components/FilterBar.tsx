@@ -1,6 +1,7 @@
 import React from 'react';
-import { Search, Globe, Tag, Star, MessageSquare, Save, LayoutGrid, List, Trash2 } from 'lucide-react';
+import { Globe, Tag, Star, MessageSquare, Save, LayoutGrid, List, Trash2, MapPin } from 'lucide-react';
 import type { FilterState, MetaData } from '../types';
+import { AutocompleteInput } from './AutocompleteInput';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -19,13 +20,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 }) => {
   return (
     <section className="toolbar-section">
-      <div className="search-box">
-        <Search className="search-icon" size={18} />
-        <input
-          type="text"
-          placeholder="Search agency name, city, or services (e.g. SEO, London, Web Dev)..."
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <AutocompleteInput
+          type="company"
           value={filters.search}
-          onChange={(e) => onChange({ search: e.target.value, page: 1 })}
+          onChange={(val) => onChange({ search: val, page: 1 })}
+          placeholder="Search agency name, keywords, or services (e.g. SEO, Web Dev)..."
+        />
+
+        <AutocompleteInput
+          type="city"
+          country={filters.country}
+          value={filters.city}
+          onChange={(val) => onChange({ city: val, page: 1 })}
+          placeholder="Search City / Locality (e.g. New York, London, Austin)..."
+          icon={<MapPin className="search-icon" size={18} color="#10b981" />}
         />
       </div>
 
@@ -34,7 +43,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           <label><Globe size={13} /> Country</label>
           <select
             value={filters.country}
-            onChange={(e) => onChange({ country: e.target.value, page: 1 })}
+            onChange={(e) => onChange({ country: e.target.value, city: '', page: 1 })}
           >
             <option value="">All Countries</option>
             {meta.countries.map((c) => (

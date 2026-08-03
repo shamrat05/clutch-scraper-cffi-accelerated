@@ -47,6 +47,7 @@ export interface Company {
 export interface FilterState {
   search: string;
   country: string;
+  city: string;
   price_range: string;
   min_rating: string;
   min_reviews: string;
@@ -70,4 +71,5 @@ export interface MetaData {
   total_companies: number;
   countries: string[];
   price_ranges: string[];
+  cities?: string[];
 }

@@ -13,6 +13,7 @@ import { ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 const INITIAL_FILTERS: FilterState = {
   search: '',
   country: '',
+  city: '',
   price_range: '',
   min_rating: '',
   min_reviews: '',
@@ -62,6 +63,7 @@ export function App() {
     const params = new URLSearchParams({
       search: filters.search,
       country: filters.country,
+      city: filters.city,
       price_range: filters.price_range,
       min_rating: filters.min_rating,
       min_reviews: filters.min_reviews,
@@ -163,6 +165,8 @@ export function App() {
                   <option value="review_count">Review Count</option>
                   <option value="rating">Overall Rating</option>
                   <option value="company_name">Company Name</option>
+                  <option value="locality">City / Locality</option>
+                  <option value="country">Country</option>
                 </select>
                 <button
                   className="btn btn-secondary btn-icon-only"
