@@ -11,6 +11,11 @@ interface FilterBarProps {
   onSaveView: () => void;
 }
 
+interface CityItem {
+  city: string;
+  count: number;
+}
+
 export const FilterBar: React.FC<FilterBarProps> = ({
   filters,
   meta,
@@ -18,7 +23,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onReset,
   onSaveView,
 }) => {
-  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [availableCities, setAvailableCities] = useState<CityItem[]>([]);
   const [isFetchingCities, setIsFetchingCities] = useState(false);
 
   // Fetch Cities dynamically whenever Country changes
@@ -88,9 +93,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <option value="">
               {isFetchingCities ? 'Loading Cities...' : `All Cities (${availableCities.length})`}
             </option>
-            {availableCities.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            {availableCities.map((item) => (
+              <option key={item.city} value={item.city}>
+                {item.city} ({item.count.toLocaleString()} agencies)
               </option>
             ))}
           </select>

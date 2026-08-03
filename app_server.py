@@ -69,7 +69,13 @@ def get_meta():
 @app.get("/api/cities")
 def get_cities(country: str = "", q: str = ""):
     conn = get_db()
-    where_clauses = ["locality != ''"]
+    where_clauses = [
+        "locality != ''",
+        "locality NOT LIKE '%Ste%'",
+        "locality NOT LIKE '%Suite%'",
+        "locality NOT LIKE '%#%'",
+        "NOT regexp_matches(locality, '^[0-9]')"
+    ]
     params = []
     if country and country.strip():
         where_clauses.append("country = ?")
@@ -79,9 +85,16 @@ def get_cities(country: str = "", q: str = ""):
         params.append(f"%{q.strip().lower()}%")
     
     where_str = " AND ".join(where_clauses)
-    sql = f"SELECT DISTINCT TRIM(locality) FROM companies WHERE {where_str} ORDER BY 1 LIMIT 100"
+    sql = f"""
+        SELECT TRIM(locality) AS city, COUNT(*) AS cnt 
+        FROM companies 
+        WHERE {where_str} 
+        GROUP BY 1 
+        ORDER BY cnt DESC 
+        LIMIT 200
+    """
     rows = conn.execute(sql, params).fetchall()
-    return [r[0] for r in rows if r[0]]
+    return [{"city": r[0], "count": r[1]} for r in rows if r[0]]
 
 @app.get("/api/suggestions")
 def get_suggestions(q: str = "", type: str = "company", country: str = ""):
@@ -93,12 +106,20 @@ def get_suggestions(q: str = "", type: str = "company", country: str = ""):
     type_clean = type.lower().strip()
     
     if type_clean == "city":
-        where_str = "LOWER(locality) LIKE ?"
+        where_clauses = [
+            "locality != ''",
+            "LOWER(locality) LIKE ?",
+            "locality NOT LIKE '%Ste%'",
+            "locality NOT LIKE '%Suite%'",
+            "locality NOT LIKE '%#%'",
+            "NOT regexp_matches(locality, '^[0-9]')"
+        ]
         params = [term]
         if country and country.strip():
-            where_str += " AND country = ?"
+            where_clauses.append("country = ?")
             params.append(country.strip())
-        sql = f"SELECT DISTINCT TRIM(locality) FROM companies WHERE {where_str} AND locality != '' ORDER BY 1 LIMIT 10"
+        where_str = " AND ".join(where_clauses)
+        sql = f"SELECT TRIM(locality), COUNT(*) AS cnt FROM companies WHERE {where_str} GROUP BY 1 ORDER BY cnt DESC LIMIT 10"
         return [r[0] for r in conn.execute(sql, params).fetchall()]
 
     elif type_clean == "reviewer":
