@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Globe, Tag, Star, MessageSquare, Save, LayoutGrid, List, Trash2, MapPin } from 'lucide-react';
 import type { FilterState, MetaData } from '../types';
 import { AutocompleteInput } from './AutocompleteInput';
@@ -18,6 +18,28 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   onReset,
   onSaveView,
 }) => {
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [isFetchingCities, setIsFetchingCities] = useState(false);
+
+  // Fetch Cities dynamically whenever Country changes
+  useEffect(() => {
+    setIsFetchingCities(true);
+    const params = new URLSearchParams();
+    if (filters.country) {
+      params.append('country', filters.country);
+    }
+
+    fetch(`/api/cities?${params.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setAvailableCities(data);
+        }
+      })
+      .catch((err) => console.error('Error fetching cities:', err))
+      .finally(() => setIsFetchingCities(false));
+  }, [filters.country]);
+
   return (
     <section className="toolbar-section">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
@@ -33,12 +55,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           country={filters.country}
           value={filters.city}
           onChange={(val) => onChange({ city: val, page: 1 })}
-          placeholder="Search City / Locality (e.g. New York, London, Austin)..."
+          placeholder="Type Custom City / Locality (e.g. New York, London, Austin)..."
           icon={<MapPin className="search-icon" size={18} color="#10b981" />}
         />
       </div>
 
       <div className="filters-row">
+        {/* Country Dropdown */}
         <div className="filter-group">
           <label><Globe size={13} /> Country</label>
           <select
@@ -54,6 +77,26 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
 
+        {/* City Dropdown dynamically populated from DB */}
+        <div className="filter-group">
+          <label><MapPin size={13} /> City / Locality Dropdown</label>
+          <select
+            value={filters.city}
+            onChange={(e) => onChange({ city: e.target.value, page: 1 })}
+            disabled={isFetchingCities}
+          >
+            <option value="">
+              {isFetchingCities ? 'Loading Cities...' : `All Cities (${availableCities.length})`}
+            </option>
+            {availableCities.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Rate Range */}
         <div className="filter-group">
           <label><Tag size={13} /> Rate Range</label>
           <select
@@ -69,6 +112,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
 
+        {/* Min Rating */}
         <div className="filter-group">
           <label><Star size={13} /> Min Rating</label>
           <select
@@ -82,6 +126,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
 
+        {/* Min Reviews */}
         <div className="filter-group">
           <label><MessageSquare size={13} /> Min Reviews</label>
           <select
@@ -96,6 +141,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
           </select>
         </div>
 
+        {/* Checkboxes & Actions */}
         <div className="filter-group" style={{ flexDirection: 'row', gap: '16px', alignItems: 'center' }}>
           <label className="checkbox-label">
             <input
