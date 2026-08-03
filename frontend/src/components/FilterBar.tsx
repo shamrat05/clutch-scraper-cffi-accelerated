@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Globe, Tag, Star, MessageSquare, Save, LayoutGrid, List, Trash2, MapPin } from 'lucide-react';
 import type { FilterState, MetaData } from '../types';
 import { AutocompleteInput } from './AutocompleteInput';
+import { getCountryDisplayName } from '../utils/countryNames';
 
 interface FilterBarProps {
   filters: FilterState;
@@ -29,19 +30,21 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   // Fetch Cities dynamically whenever Country changes
   useEffect(() => {
     setIsFetchingCities(true);
-    const params = new URLSearchParams();
-    if (filters.country) {
-      params.append('country', filters.country);
-    }
+    const url = filters.country ? `/api/cities?country=${encodeURIComponent(filters.country)}` : '/api/cities';
 
-    fetch(`/api/cities?${params.toString()}`)
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
           setAvailableCities(data);
+        } else {
+          setAvailableCities([]);
         }
       })
-      .catch((err) => console.error('Error fetching cities:', err))
+      .catch((err) => {
+        console.error('Error fetching cities:', err);
+        setAvailableCities([]);
+      })
       .finally(() => setIsFetchingCities(false));
   }, [filters.country]);
 
@@ -76,7 +79,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <option value="">All Countries</option>
             {meta.countries.map((c) => (
               <option key={c} value={c}>
-                {c}
+                {getCountryDisplayName(c)} ({c})
               </option>
             ))}
           </select>

@@ -37,7 +37,7 @@ META_CACHE = {
 }
 
 def get_db():
-    return GLOBAL_CONN
+    return GLOBAL_CONN.cursor()
 
 VITE_DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
@@ -62,6 +62,50 @@ def index():
     with open(os.path.join(BASE_DIR, "templates", "index.html"), "r", encoding="utf-8") as f:
         return f.read()
 
+COUNTRY_CODE_MAP = {
+    "united states": "US",
+    "usa": "US",
+    "us": "US",
+    "bangladesh": "BD",
+    "bd": "BD",
+    "united kingdom": "GB",
+    "uk": "GB",
+    "gb": "GB",
+    "canada": "CA",
+    "ca": "CA",
+    "australia": "AU",
+    "au": "AU",
+    "germany": "DE",
+    "de": "DE",
+    "france": "FR",
+    "fr": "FR",
+    "india": "IN",
+    "in": "IN",
+    "united arab emirates": "AE",
+    "uae": "AE",
+    "ae": "AE",
+    "singapore": "SG",
+    "sg": "SG",
+    "netherlands": "NL",
+    "nl": "NL",
+    "spain": "ES",
+    "es": "ES",
+    "italy": "IT",
+    "it": "IT",
+    "brazil": "BR",
+    "br": "BR",
+    "japan": "JP",
+    "jp": "JP",
+    "pakistan": "PK",
+    "pk": "PK"
+}
+
+def resolve_country_code(c_str: str) -> str:
+    if not c_str:
+        return ""
+    clean = c_str.strip().lower()
+    return COUNTRY_CODE_MAP.get(clean, c_str.strip().upper())
+
 @app.get("/api/meta")
 def get_meta():
     return META_CACHE
@@ -69,6 +113,7 @@ def get_meta():
 @app.get("/api/cities")
 def get_cities(country: str = "", q: str = ""):
     conn = get_db()
+    c_code = resolve_country_code(country)
     where_clauses = [
         "locality != ''",
         "locality NOT LIKE '%Ste%'",
@@ -77,9 +122,9 @@ def get_cities(country: str = "", q: str = ""):
         "NOT regexp_matches(locality, '^[0-9]')"
     ]
     params = []
-    if country and country.strip():
+    if c_code:
         where_clauses.append("country = ?")
-        params.append(country.strip())
+        params.append(c_code)
     if q and q.strip():
         where_clauses.append("LOWER(locality) LIKE ?")
         params.append(f"%{q.strip().lower()}%")
@@ -94,7 +139,14 @@ def get_cities(country: str = "", q: str = ""):
         LIMIT 200
     """
     rows = conn.execute(sql, params).fetchall()
-    return [{"city": r[0], "count": r[1]} for r in rows if r[0]]
+    
+    items = []
+    for r in rows:
+        if r and len(r) >= 2 and r[0]:
+            city_str = str(r[0]).encode('utf-8', 'ignore').decode('utf-8').strip()
+            if city_str:
+                items.append({"city": city_str, "count": int(r[1])})
+    return items
 
 @app.get("/api/suggestions")
 def get_suggestions(q: str = "", type: str = "company", country: str = ""):
@@ -157,13 +209,14 @@ def search_companies(
     where_clauses = ["1=1"]
     params = []
 
+    c_code = resolve_country_code(country)
     if search and search.strip():
         s_like = f"%{search.strip().lower()}%"
         where_clauses.append("(LOWER(company_name) LIKE ? OR LOWER(locality) LIKE ? OR LOWER(services_offered) LIKE ?)")
         params.extend([s_like, s_like, s_like])
-    if country and country.strip():
+    if c_code:
         where_clauses.append("country = ?")
-        params.append(country.strip())
+        params.append(c_code)
     if city and city.strip():
         where_clauses.append("LOWER(locality) LIKE ?")
         params.append(f"%{city.strip().lower()}%")
@@ -182,9 +235,11 @@ def search_companies(
             params.append(int(min_reviews))
         except ValueError:
             pass
-    if has_phone:
+    has_phone_bool = str(has_phone).lower() == 'true'
+    has_website_bool = str(has_website).lower() == 'true'
+    if has_phone_bool:
         where_clauses.append("phone != ''")
-    if has_website:
+    if has_website_bool:
         where_clauses.append("official_website != ''")
 
     where_str = " AND ".join(where_clauses)
@@ -205,9 +260,11 @@ def search_companies(
     # Count matching query
     count_sql = f"SELECT COUNT(*) FROM companies WHERE {where_str}"
     count_row = conn.execute(count_sql, params).fetchone()
-    total_matched = count_row[0] if count_row else 0
+    total_matched = int(count_row[0]) if count_row and count_row[0] is not None else 0
+    page_num = int(page)
+    limit_num = int(limit)
 
-    offset = (page - 1) * limit
+    offset = (page_num - 1) * limit_num
     data_sql = f"""
         SELECT 
             company_name, profile_url, official_website, phone, founding_year, 
@@ -217,7 +274,7 @@ def search_companies(
         FROM companies 
         WHERE {where_str} 
         ORDER BY {sort_col} {sort_dir} NULLS LAST
-        LIMIT {limit} OFFSET {offset}
+        LIMIT {limit_num} OFFSET {offset}
     """
     rows = conn.execute(data_sql, params).fetchall()
     cols = [column[0] for column in conn.description]
@@ -233,9 +290,9 @@ def search_companies(
 
     return {
         "total": total_matched,
-        "page": page,
-        "limit": limit,
-        "total_pages": (total_matched + limit - 1) // limit if limit > 0 else 1,
+        "page": page_num,
+        "limit": limit_num,
+        "total_pages": (total_matched + limit_num - 1) // limit_num if limit_num > 0 else 1,
         "items": items
     }
 
@@ -283,11 +340,14 @@ def search_reviews(
     sort_col = allowed_sorts.get(sort_by, "review_rating")
     sort_dir = "DESC" if sort_order.upper() == "DESC" else "ASC"
 
+    page_num = int(page)
+    limit_num = int(limit)
+
     try:
         count_sql = f"SELECT COUNT(*) FROM reviews WHERE {where_str}"
-        total_matched = conn.execute(count_sql, params).fetchone()[0]
+        total_matched = int(conn.execute(count_sql, params).fetchone()[0])
 
-        offset = (page - 1) * limit
+        offset = (page_num - 1) * limit_num
         data_sql = f"""
             SELECT 
                 reviewer_name, reviewer_company, review_title, review_date, review_rating, review_body,
@@ -295,7 +355,7 @@ def search_reviews(
             FROM reviews
             WHERE {where_str}
             ORDER BY {sort_col} {sort_dir} NULLS LAST
-            LIMIT {limit} OFFSET {offset}
+            LIMIT {limit_num} OFFSET {offset}
         """
         rows = conn.execute(data_sql, params).fetchall()
         cols = [column[0] for column in conn.description]
@@ -307,9 +367,9 @@ def search_reviews(
 
     return {
         "total": total_matched,
-        "page": page,
-        "limit": limit,
-        "total_pages": (total_matched + limit - 1) // limit if limit > 0 else 1,
+        "page": page_num,
+        "limit": limit_num,
+        "total_pages": (total_matched + limit_num - 1) // limit_num if limit_num > 0 else 1,
         "items": items
     }
 
